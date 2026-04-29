@@ -20,7 +20,7 @@ def get_llm_response(
             f"Unknown LLM_Provider='{provider}'."
         )
  
-def _call_claude(
+async def _call_claude(
         system_prompt: str,
         messages: list[Message],
         max_tokens: int,
@@ -30,3 +30,20 @@ def _call_claude(
     except ImportError:
         raise RuntimeError("anthropic package not installed. Run: pip install antrhopic")
     
+    api_key = os.dotenv("Anthropic_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "Anthropic_API_KEY not set in .env"
+        )
+    
+    client = anthropic.AsyncAntropic(api_key=api_key)
+
+    response = await client.message.create(
+        model="claude-opus-4-5",
+        max_tokens=max_tokens,
+        system=system_prompt,
+        messages=messages,
+    )
+
+    return response.content[0].text
+
