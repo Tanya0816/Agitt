@@ -1,3 +1,4 @@
+import { use } from "react";
 
 export function buildTriagePrompt({ contractSource, contractName, language, version, skills}) {
     const vulnList = skills.vulnerabilities
@@ -18,8 +19,37 @@ export function buildTriagePrompt({ contractSource, contractName, language, vers
      "summary" :"string",
      "riskyFunctions": [
      {
-      "name": "string}]
-    }
-`;
+      "name": "string-exact function name",
+      "reason":["string-brief reason 1","string-brief reason 2"]
+      }
+      ],
+      "pass1Findings": [
+      {
+       "id":"P1-01",
+       "title":"string",
+       "severity":"CRITICAL | HIGH | MEDIUM | |LOW |INFORMATIONAL",
+       "vulnerabilityClass": "string",
+       "description": "string",
+       "location":"string-function name or line reference",
+       "codeSnippet":"string or null",
+       "remediation": "string",
+       "reference": ["string"]
+       }
+       ],
+       "positives": ["string"],
+       "gasOptimizations": ["string"],
+       "auditNotes": "string"
+    }`;
+
+    const userPrompt = `Triage the following ${language} contract${version ? ` (${version})` : ""}:
+    
+    File: ${contractName}
+    
+    \`\`\${language}
+    ${contractSource}
+    \`\`\``;
+
+    return {systemPrompt, userPrompt};
 
 }
+
