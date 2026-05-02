@@ -53,3 +53,54 @@ export function buildTriagePrompt({ contractSource, contractName, language, vers
 
 }
 
+export function buildDeepAuditPrompt({
+    functionName, functionSource, contractSource, contractName,language,version,skills
+    }) {
+        const vulnList = skills.vulnerabilities.map((v) => {
+            const hints = v.checkHints.map((h) => ` ${h}`).join("\n");
+            const refs = (v.references || []).map((r) => ` ${r}`).join("\n");
+            return `- **${v.name}**: ${v.description}\n${hints}\n${refs}`;
+        })
+        .join("\n\n");
+
+        const docContext = skills.fetchedDocs ? `\nRelevant decumentation contex:\n${skills.fetchedDocs.slice(0,4000)}\n` : "";
+
+        const systemPrompt = `An expert smart contract auditor .
+        You are performing a DEEP AUDIT of a single function. Be exhaustive and precise.
+        
+        Check the function against every vulnerability class listed below:
+        ${vulnList}
+        ${docContext}
+        For each vulnerability class, you Must either confirm it is present (anad report it) or confirm it is not applicable (and skip it).
+        
+        Respond ONL with a valid JSON object - no prose before or after:
+        {
+          "findings": [
+          {
+           "id": "string",
+           "title": "string",
+           "severity": "CRITICAL | HIGH | MEDIUM | LOW | INFORMATION",
+           "vulnerabilityClass": "string-must match one of the known classes above",
+           "description": "string-precise technical explanation",
+           "location": "string-function name and line refernce if available",
+           "codeSnippet": "string or null",
+           "remediation": "string-concrete fix",
+           "references": ["string - SWC registry , EIP, or doc URL"]}] 
+         }
+         If the function has NO vulnerabilities, return: { "findings": []}`;
+
+         const userPrompt = `Deep audit the following function from ${contractName}${version ? ` (${language} ${version})` : ""}:
+         
+         Function: \`${functionName}\`
+
+         \`\`\`${language}
+         ${functionSource}
+         \`\`\`
+
+         For context , here is the full contract ( do not audit it - only use it for context on state variables and imports):
+         \`\`\`${language}
+         ${contractSource}
+         \`\`\``;
+
+         return {systemPrompt, userPrompt};  
+    }
