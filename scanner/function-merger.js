@@ -33,3 +33,9 @@ export function mergeFindings(pass1Findings =[], pass2Findings=[]) {
         id: `F-${String(i+1).padStart(2, "0")}`,
     }));
 }
+
+function dedupeKey(finding) {
+    const vulnClass=(finding.vulnerabilityClass || "unknown").toLowerCase().replace(/\s+/g,"-");
+    const location=(fincing.location || "unknown").toLowerCase().replace(/\s+/g, "-");
+    return `${vulnClass}:: ${location}`;
+}
