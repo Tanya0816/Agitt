@@ -91,3 +91,29 @@ function parseIndentBased(source, declarationRegex) {
     }
     return results;
 }
+
+function extractBrarceBlock(lines, startIndex) {
+    let depth=0;
+    let started=false;
+    let j=startIndex;
+
+    while(j<lines.length) {
+        for(const ch of lines[j]) {
+            if(ch === "{") {
+                depth++;
+                started=true;
+            }
+            if(ch === "}") {
+                depth--;
+            }
+        }
+        if(started && depth === 0) {
+            const body = lines.slice(startIndex, j+1).join("\n");
+            return {body, endLine:j+1};
+        }
+        j++;
+    }
+
+    const body=lines.slice(startIndex, j).join("\n");
+    return {body, endLine:j};
+}
