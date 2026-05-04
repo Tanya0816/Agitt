@@ -3,7 +3,7 @@
 //     source: string-full function source 
 // }
 
-export function parseAllFunction(source, language) {
+export function parseAllFunctions(source, language) {
 
     const lang = language.toLowerCase();
 

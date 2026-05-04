@@ -1,7 +1,7 @@
 import { buildDeepAuditPrompt } from "./prompt-builder.js";
 import { callLLM } from "../utils/retry.js";
 
-export async function runPassDeep({
+export async function runPass2Deep({
     contractSource,
     countractName,
     language,
