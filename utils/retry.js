@@ -2,7 +2,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import readLine from  "readLine";
 import {config} from "../config.js";
-import { format } from "node:path";
+
 
 const client = new Anthropic({ apiKey: config.anthropicApiKey});
 const MAX_RETRIES = 3;
