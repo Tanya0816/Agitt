@@ -25,7 +25,7 @@ function parseSolidity(source) {
     const lines = source.split("\n");
     const results = [];
 
-    const fnRegex = /^\s*(?:function\s+(\w+)|constructor\s*\(|receive\s*\(|fallback\s*\(|modifier\s+(\w+)))))/;
+    const fnRegex = /^\s*(?:function\s+(\w+)|constructor\s*\(|receive\s*\(|fallback\s*\(|modifier\s+(\w+))/;
 
     let i=0;
     while(i<lines.length) {

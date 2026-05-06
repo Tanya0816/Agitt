@@ -8,7 +8,7 @@ export function detectLanguageAndVersion(source, fileName) {
         let notess=null;
 
         if(version) {
-            const clean = version.replace(/[\^->=<\s]/g, "").split(".").map(Number);
+            const clean = version.replace(/[-\^>=<\s]/g, "").split(".").map(Number);
             if(clean[0] === 0 && clean[1] < 8) {
                 notes = `Solidity ${version}  predates 0.8.x - integer overflow/underflow is a REAL risk. SafeMacth required.`;
             }
@@ -26,11 +26,13 @@ export function detectLanguageAndVersion(source, fileName) {
     }
 
     if(source.includes("pragma solidity"))
-        return detectLanguageAndVersion(source, "contract.rs");
+        return detectLanguageAndVersion(source, "contract.sol");
+    if (source.includes("use solana_program") || source.includes("use cosmwasm_std"))      
+       return detectLanguageAndVersion(source, "contract.rs");
 
     return {
         language: "unknown",
         version: null,
-        notes: "Language could not be declared from extension or content.";
+        notes: "Language could not be declared from extension or content.",
     };
 }

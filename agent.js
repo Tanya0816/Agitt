@@ -14,7 +14,7 @@ import { detectLanguageAndVersion } from "./utils/detector.js";
 import { runPass1Triage } from "./scanner/pass1-triage.js";
 import { runPass2Deep } from "./scanner/pass2-deep.js";
 import { parseAllFunctions } from "./scanner/function-parser.js";
-import { mergeFindings } from "./scanner/function-merger.js";
+import { mergeFindings } from "./scanner/findings-merger.js";
 import { loadSkills } from "./skills/loader.js";
 import { generateReport } from "./reporter.js";
 import { storeAudit } from "./storage/index.js";
@@ -23,128 +23,128 @@ import { time } from "console";
 export async function runAgent({ contractSource, contractName, outputDir, format, store }) {
     const startTime = Date.now();
 
-// Step 1- Detect language and version 
-    console.log("\n[step 1]Detecting language and version..." );
-    const { language, version, notes }=detectLanguageAndVersion(contractSource, contractName);
-    console.log(` Language: ${ language}`);
+    // Step 1- Detect language and version 
+    console.log("\n[step 1]Detecting language and version...");
+    const { language, version, notes } = detectLanguageAndVersion(contractSource, contractName);
+    console.log(` Language: ${language}`);
     console.log(` Version: ${version || "unknown"}`);
-    if(notes)
+    if (notes)
         console.log(`Note: ${notes}`);
 
-// Step 2 - load skills neede for auditing
+    // Step 2 - load skills neede for auditing
     console.log("\n[step 2] Loading skills and fetching documentation...");
     const skills = await loadSkills(language);
     console.log(` Vulnerability patterns : ${skills.vulnerabilities.length}`);
     console.log(` Documentation loaded : ${skills.docsLoaded} source(s)`);
 
-    
-// Step 3 - parse function from source
+
+    // Step 3 - parse function from source
     console.log("\n[step 3] Parsing contract functions...");
-    const allFunctions=parseAllFunctions(contractSource, language);
+    const allFunctions = parseAllFunctions(contractSource, language);
     console.log(` Found ${allFunctions.length} function(s)`);
 
-// Step 4 - pass 1-triage scan
- console.log("\n[pass 1/2] Running triage scan...");
- const triageResult = await runPass1Triage({contractSource, contractName, language, version, skills});
+    // Step 4 - pass 1-triage scan
+    console.log("\n[pass 1/2] Running triage scan...");
+    const triageResult = await runPass1Triage({ contractSource, contractName, language, version, skills });
 
- console.log(`\n LLM idetified ${triageResult.riskyFunctions.length} risky function(s):\n`);
- triageResult.riskyFunctions.forEach((fn, i) => {
-    const reasons= fn.reasons.join(", ");
-    console.log(` ${i + 1}. ${fn.name.padEnd(25)} - ${reasons}`);
- });
+    console.log(`\n LLM idetified ${triageResult.riskyFunctions.length} risky function(s):\n`);
+    triageResult.riskyFunctions.forEach((fn, i) => {
+        const reasons = fn.reasons.join(", ");
+        console.log(` ${i + 1}. ${fn.name.padEnd(25)} - ${reasons}`);
+    });
 
-//  Step 5- User checkpoint
-   const auditScope = await promtpUserCheckpoint(triageResult.riskyFunctions, allFunctions);
+    //  Step 5- User checkpoint
+    const auditScope = await promtpUserCheckpoint(triageResult.riskyFunctions, allFunctions);
 
-   let pass2Findings = [];
+    let pass2Findings = [];
 
-   if (auditScope.mode === "skip") {
-    console.log("\n[pass 2/2] Skipped - generating report from pass 1 findings only.");
-   } else {
-    const functionsToAudit = auditScope.mode === "flagged" ? triageResult.riskyFunctions.map((f) => f.name);
-    auditScope.mode === "all" ? allFunctions.map((f) => f.name);
-    [];
+    if (auditScope.mode === "skip") {
+        console.log("\n[pass 2/2] Skipped - generating report from pass 1 findings only.");
+    } else {
+        const functionsToAudit = auditScope.mode === "flagged" ? triageResult.riskyFunctions.map((f) => f.name) :
+        auditScope.mode === "all" ? allFunctions.map((f) => f.name) :
+            [];
 
-    console.log(`\n[pass 2/2] Deep auditing ${functionsToAudit.length} function(s)...`);
+        console.log(`\n[pass 2/2] Deep auditing ${functionsToAudit.length} function(s)...`);
 
-    pass2Findings = await runPass2Deep({
-        contractSource,
+        pass2Findings = await runPass2Deep({
+            contractSource,
+            contractName,
+            language,
+            version,
+            skills,
+            allFunctions,
+            functionsToAudit,
+        });
+    }
+
+    // Step 6 -Merge findings
+    console.log("\n[step 6] Merge mergeFindings...");
+    const allFindings = mergeFindings(triageResult.pass1Findings, pass2Findings);
+    console.log(` Total findings after dedup : ${allFunctions.length}`);
+
+    const overallRisk = deriveOverallRisk(allFunctions);
+    console.log(` Overall risk    : ${overallRisk}`);
+
+    // Step 7 - Generate report 
+    console.log("\n[step 7] Generating report...");
+    if (!fs.existsSync(outputDir))
+        fs.mkdirSync(outputDir, { recursive: true });
+    const baseName = contractName.replace(/\.[^.]+$/, "");
+    const timestamp = new Date().toISOString().replace(/[:]/g, "-").slice(0, 19);
+    const reportId = `${baseName}_${timestamp}`;
+
+    const report = {
+        id: reportId,
         contractName,
         language,
         version,
-        skills,
-        allFunctions,
-        functionsToAudit,
-    });
-   }
+        auditedAt: new Date().toISOString(),
+        durationMs: Date.now() - startTime,
+        auditScope: auditScope.mode,
+        summary: triageResult.summary,
+        overallRisk,
+        findings: allFindings,
+        positives: triageResult.positives || [],
+        gasOptimizations: triageResult.gasOptimizations || [],
+        auditNotes: triageResult.auditNotes || "",
+    };
+    const written = await generateReport({ report, outputDir, format, baseName: reportId });
+    written.forEach((f) => console.log(` Written:  ${f}`));
 
-// Step 6 -Merge findings
-console.log("\n[step 6] Merge mergeFindings...");
-const allFunctions = mergeFindings(triageResult.pass1Findings, pass2Findings);
-console.log(` Total findings after dedup : ${allFunctions.length}`);
-
-const overallRisk = deriveOverallRisk(allFunctions);
-console.log(` Overall risk    : ${overallRisk}`);
-
-// Step 7 - Generate report 
-console.log("\n[step 7] Generating report...");
-if (!fs.existsSync(outputDir))
-    fs.mkdirSync(outputDir, { recursive: true });
-const baseName = contractName.replace(/\.[^.]+$/, "");
-const timestamp = new Date().toISOString().replace(/[:]/g, "-").slice(0, 19);
-const reportId = `${baseName}_${timestamp}`;
-
-const report = {
-    id: reportId,
-    contractName,
-    language,
-    version,
-    auditedAt:  new Date().toISOString(),
-    durationMs:  Date.now() - startTime,
-    auditScope:  auditScope.mode,
-    summary:  triageResult.summary,
-    overallRisk,
-    findings:  allFindings,
-    positives:  triageResult.positives  || [],
-    gasOptimizations:  triageResult.gasOptimizations ||  [],
-    auditNotes:  triageResult.auditNotes  || "",
-};
-const written = await generateReport({ report, outputDir, format, baseName: reportId});
-written.forEach((f) => console.log(` Written:  ${f}`));
-
-//  Step 8 - Optional 0G storage
- if (store) {
-    console.log("\n[0G] Storing audit to0G network...");
-    try {
-        const storageId = await storeAudit(report);
-        console.log(` Stored with ID:  ${storageId}`);
-        report.storageId = storageId;
-        if (format === "json" || format === "both") {
-            const { default: path } =  await import("path");
-            fs.writeFileSync(
-                path.join(outputDir, `${reportId}.json`),
-                JSON.stringify(report, null, 2)
-            );
+    //  Step 8 - Optional 0G storage
+    if (store) {
+        console.log("\n[0G] Storing audit to 0G network...");
+        try {
+            const storageId = await storeAudit(report);
+            console.log(` Stored with ID:  ${storageId}`);
+            report.storageId = storageId;
+            if (format === "json" || format === "both") {
+                const { default: path } = await import("path");
+                fs.writeFileSync(
+                    path.join(outputDir, `${reportId}.json`),
+                    JSON.stringify(report, null, 2)
+                );
+            }
+        } catch (err) {
+            console.error(` [warn] 0G storage failed: ${err.message}`);
         }
-    } catch (err) {
-        console.error(` [warn] 0G storage failed: ${err.message}`);
     }
- }
 
- console.log(`\n[agitt] Audit complete in ${((Date.now() - startTime) / 1000).toFixed(2)}s\n`);
- return report;
+    console.log(`\n[agitt] Audit complete in ${((Date.now() - startTime) / 1000).toFixed(2)}s\n`);
+    return report;
 }
 
 //  User checkpoint prompt
 async function promptUserCheckpoint(riskyFunctions, allFunctions) {
-    const r1 = readline.createInterface({ input: process.stdin, ooutput: process.stdout});
+    const r1 = readline.createInterface({ input: process.stdin, ooutput: process.stdout });
     const ask = (q) => new Promise((resolve) => r1.question(q, resolve));
 
     try {
         const proceed = await ask("\nProceed with deep audit on these functions? (y/n): ");
 
         if (proceed.trim().toLowerCase() === "y") {
-            return { mode: "flagged"};
+            return { mode: "flagged" };
         }
 
         console.log(`
@@ -154,16 +154,16 @@ async function promptUserCheckpoint(riskyFunctions, allFunctions) {
             [3] Generate report from pass 1 findings only ( skip pass 2)
             `);
 
-            let choice = "";
-            while (!["1","2","3"].includes(choice.trim())) {
-                choice = await ask(" Enter choice (1/2/3): ");
-                if (!["1", "2", "3"].includes(choice.trim())) {
-                    console.log(" [!] Please enter 1, 2,or 3.");
-                }
+        let choice = "";
+        while (!["1", "2", "3"].includes(choice.trim())) {
+            choice = await ask(" Enter choice (1/2/3): ");
+            if (!["1", "2", "3"].includes(choice.trim())) {
+                console.log(" [!] Please enter 1, 2,or 3.");
             }
-            
-            const modeMap = { "1": "flagged", "2": "all", "3": "skip "};
-            return { mode: modeMap[choice.trim()] };
+        }
+
+        const modeMap = { "1": "flagged", "2": "all", "3": "skip " };
+        return { mode: modeMap[choice.trim()] };
     } finally {
         r1.close();
     }
@@ -172,7 +172,7 @@ async function promptUserCheckpoint(riskyFunctions, allFunctions) {
 // Derive overall risk from findings
 
 function deriveOverallRisk(findings) {
-    const order = ["CRITICAL" , "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"];
+    const order = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"];
     for (const level of order) {
         if (findings.some((f) => fseveroty === level)) return level;
     }

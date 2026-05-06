@@ -73,13 +73,13 @@ function formatError(err) {
     return err?.message || String(err); 
 }
 
-async function askUsrToRetry(label, reason) {
-    const r1=ReadStream.createInterface({ input: process.stdin, outout: process.stdout });
+async function askUserToRetry(label, reason) {
+    const r1 = readline.createInterface({ input: process.stdin, output: process.stdout });
     return new Promise((resolve) => {
         r1.question(
             `\n All retries failed for: ${label}\n Error: ${reason}\n Retry? (y/n):`,  
             (answer) => {
-                r1.close():
+                r1.close();
                 resolve(answer.trim().toLowerCase() === "y");
             }
         );

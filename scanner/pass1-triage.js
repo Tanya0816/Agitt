@@ -1,6 +1,6 @@
 
 import { buildTriagePrompt } from "./prompt-builder.js";
-import {callLLM} from "..utils/retry.js";
+import { callLLM } from "../utils/retry.js";
 
 export async function runPass1Triage({contractSource, contractName, languagea, version,skills}) {
     const {systemPrompt, userPrompt} = buildTriagePrompt({

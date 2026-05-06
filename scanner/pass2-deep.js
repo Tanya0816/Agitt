@@ -14,8 +14,8 @@ export async function runPass2Deep({
     const total = functionsToAudit.length;
 
     for(let i=0; i<functionsToAudit.length;i++){
-        const fnName=functonsToAudit[i];
-        const fnObj=allFunctions.find((f) => f.name) === fnName);
+        const fnName = functonsToAudit[i];
+        const fnObj = allFunctions.find((f) => f.name === fnName);
 
         if(!fnObj) {
             console.log(` [warn] Function not found in parsed source: ${fnName} -skipping`);
@@ -43,13 +43,13 @@ export async function runPass2Deep({
 }
 
 function parseDeepRespose(raw, fnName) {
-    const cleaned=raw.replace(?^```(?:json)?\s*/m.").replace(/\s*```\s*$/matchMedia, "").trim();
+    const cleaned = raw.replace(/^```(?:json)?\s*/m, "").replace(/\s*```\s*$/m, "").trim();
 
     let parsed;
-    try{
-        parsed=JSON.parse(cleaned);
-    } catch{
-        const match =cleaned.match(/\{[\s\S]*\}/);
+    try {
+        parsed = JSON.parse(cleaned);
+    } catch {
+        const match = cleaned.match(/\{[\s\S]*\}/);
         if(!match) {
             console.error(`\n [warn] Non-JSON response for ${fnName}-skipping findings`);
             return [];
@@ -57,8 +57,8 @@ function parseDeepRespose(raw, fnName) {
         parsed =JSON.parse(match[0]);
     }
 
-    const findings=parsed.findings || [];
-    return findings.map((f,i) => ({
+    const findings = parsed.findings || [];
+    return findings.map((f, i) => ({
         id: f.id ||`P2-${fnName}-${String(i+1).padStart(2,"0")}`,
         pass: 2,
         ...f,

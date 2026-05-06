@@ -1,0 +1,37 @@
+{
+  "name": "agitt",
+  "version": "1.0.0",
+  "description": "LLM-powered smart contract security auditor with 2-pass scanning and 0G Labs decentralised storage",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "agitt": "./index.js"
+  },
+  "scripts": {
+    "audit": "node index.js",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=tests/"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0"
+  },
+  "optionalDependencies": {
+    "@0glabs/0g-ts-sdk": "^0.2.1",
+    "ethers": "^6.13.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "smart-contract",
+    "audit",
+    "security",
+    "solidity",
+    "blockchain",
+    "0g",
+    "llm"
+  ],
+  "license": "MIT"
+}
