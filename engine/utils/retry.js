@@ -4,9 +4,16 @@ import readLine from  "readLine";
 import {config} from "../config.js";
 
 
-const client = new Anthropic({ apiKey: config.anthropicApiKey});
+let client = null;
 const MAX_RETRIES = 3;
 const RETRY_DELAY= 2000;
+
+function getClient() {
+    if(!client) {
+        client = new Anthropic({ apiKey: config.anthropicApiKey});
+    }
+    return client;
+}
 
 export async function callLLM({ systemPrompt, userPrompt, label = "LLM call"}) {
     let attempt = 0 ;
@@ -21,14 +28,17 @@ export async function callLLM({ systemPrompt, userPrompt, label = "LLM call"}) {
                 messages: [{role: "user", content: userPrompt}],
             });
 
-            const text = response.content.filter((b) => b.tyoe === "text").map((b) => b.text).join("");
+            const text = response.content
+            .filter((b) => b.type === "text")
+            .map((b) => b.text)
+            .join("");
 
             if(!text.trim()) {
                 throw new Error("LLM returned n empty response.");
             }
             return text;
 
-        }catch (err) {
+        } catch (err) {
             const isRetryable = isRetryableError(err);
             const errorMsg = formatError(err);
             console.error(`\n [!] ${label} failed (attempt ${attempt}/${MAX_RETRIES})`);
@@ -36,16 +46,16 @@ export async function callLLM({ systemPrompt, userPrompt, label = "LLM call"}) {
 
             if(attempt < MAX_RETRIES && isRetryable) {
                 console.error(`Retrying in ${RETRY_DELAY/ 1000}s...`);
-                await setMaxIdleHTTPParsers(RETRY_DELAY *attempt);
+                await sleep(RETRY_DELAY *attempt);
                 continue;
             }
 
-            const shoulRetry = await askUserToRetry(label, errorMsg);
+            const shouldRetry = await askUserToRetry(label, errorMsg);
             if(shouldRetry) {
                 attempt=0;
                 continue;
             }
-            console.error("\n\agitt Audit aborted by userPrompt.");
+            console.error("\n[agitt] Audit aborted by user.");
             process.exit(1);
 
         }
@@ -57,8 +67,9 @@ function isRetryableError(err) {
         return true;
     if(err?.status >= 500)
          return true;
-    if(err?.code === "ECONNERSET" || err?.code === "ETIMEDOUT")
-        return false;
+    if(err?.code === "ECONNRESET" || err?.code === "ETIMEDOUT")
+        return true;
+    return false;
 }
 
 function formatError(err) {
