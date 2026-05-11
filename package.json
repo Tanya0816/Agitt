@@ -12,7 +12,8 @@
     "test": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=tests/"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.30.1"
+    "@anthropic-ai/sdk": "^0.30.1",
+    "@google/generative-ai": "^0.24.1"
   },
   "optionalDependencies": {
     "@0glabs/0g-ts-sdk": "^0.2.1",
