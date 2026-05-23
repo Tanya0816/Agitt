@@ -21,7 +21,13 @@ export async function callLLM({ systemPrompt, userPrompt, label = "LLM call" }) 
     while (true) {
         attempt++;
         try {
-            const model = getClient().getGenerativeModel({ model: "gemini-2.5-flash" });
+            const model = getClient().getGenerativeModel({
+                model: "gemini-2.5-flash",
+                generationConfig: {
+                    temperature: 0,
+                    responseMimeType: "application/json",
+                },
+            });
             const result = await model.generateContent(systemPrompt + "\n\n" + userPrompt);
             const text = result.response.text();
 

@@ -47,7 +47,7 @@ function parseDeepRespose(raw, fnName) {
 
     let parsed;
     try {
-        parsed = JSON.parse(cleaned);
+        parsed = validateDeepResponse(parsed, fnName);
     } catch {
         const match = cleaned.match(/\{[\s\S]*\}/);
         if (!match) {
@@ -63,4 +63,30 @@ function parseDeepRespose(raw, fnName) {
         pass: 2,
         ...f,
     }));
+}
+
+function validateDeepResponse(parsed, fnName) {
+    if (!Array.isArray(parsed.findngs)) {
+        console.warn(` [warn] pass2 response for ${fnName} missing findings array - using empty`);
+        parsed.findings = [];
+        return parsed;
+    }
+
+    const validSeverities = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"];
+    parsed.findings.forEach((f, i) => {
+        if (!f.title)
+            f.title = "Untitled finding";
+        if (!f.description)
+            f.description = "No description provided.";
+        if (!f.remediation)
+            f.remediaation = "No remediation provided.";
+        if (!f.location)
+            f.location = fnName;
+        if (!f.vulnerabilityClass)
+            f.vulnerabilityClass = 'Unknown';
+
+        const upper = (f.severity ?? "").toUpperCase();
+        f.severity = validSeverities.includes(upper) ? upper : "INFORMATIONAL";
+    });
+    return parsed;
 }

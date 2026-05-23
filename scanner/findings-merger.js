@@ -36,6 +36,6 @@ export function mergeFindings(pass1Findings = [], pass2Findings = []) {
 
 function dedupeKey(finding) {
     const vulnClass = (finding.vulnerabilityClass || "unknown").toLowerCase().replace(/\s+/g, "-");
-    const location = (fincing.location || "unknown").toLowerCase().replace(/\s+/g, "-");
+    const location = (finding.location || "unknown").toLowerCase().replace(/\s+/g, "-");
     return `${vulnClass}:: ${location}`;
 }

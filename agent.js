@@ -174,7 +174,7 @@ async function promptUserCheckpoint(riskyFunctions, allFunctions) {
 function deriveOverallRisk(findings) {
     const order = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFORMATIONAL"];
     for (const level of order) {
-        if (findings.some((f) => fseveroty === level)) return level;
+        if (findings.some((f) => f.severity === level)) return level;
     }
     return "SAFE";
 }

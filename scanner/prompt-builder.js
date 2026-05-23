@@ -47,7 +47,9 @@ export function buildTriagePrompt({ contractSource, contractName, language, vers
     
     \`\`\${language}
     ${contractSource}
-    \`\`\``;
+    \`\`\``
++ `\n\nCRITICAL: Return ONLY a valid JSON object. No markdown, no explanation, no text before or after the JSON. Your entire response must be parseable by JSON.parse().`
+    ;
 
     return {systemPrompt, userPrompt};
 
@@ -100,7 +102,9 @@ export function buildDeepAuditPrompt({
          For context , here is the full contract ( do not audit it - only use it for context on state variables and imports):
          \`\`\`${language}
          ${contractSource}
-         \`\`\``;
+         \`\`\``
+            + `\n\nCRITICAL: Return ONLY a valid JSON object. No markdown, no explanation, no text before or after the JSON. Your entire response must be parseable by JSON.parse().`
+         ;
 
          return {systemPrompt, userPrompt};  
     }
