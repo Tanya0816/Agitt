@@ -11,6 +11,13 @@ if (args.length === 0 || args.includes("--help")) {
     process.exit(0);
 }
 
+// setup for user to add their api key
+// if (args.includes("--setup")) {
+//     const { setupConfig } = await import("./config.js");
+//     await setupConfig();
+//     process.exit(0);
+// }
+
 // shared flags (apply to both file and stdinn modes)
 const rawOutput = args.includes("--output") ? args[args.indexOf("--output") + 1] : "./output";
 const outputDir = path.resolve(process.cwd(), rawOutput);

@@ -63,6 +63,47 @@ function parseDeepRespose(raw, fnName) {
         pass: 2,
         ...f,
     }));
+    findings = enrichWithLineNumbers(findings, fnObj);
+}
+
+
+function enrichWithLineNumbers(findings, fnObj) {
+    return findings.map(f => {
+        // If location already has a line number, keep it
+        if (/line\s+\d+/i.test(f.location)) return f;
+
+        // Otherwise stamp the function's start line from the parser
+        const fnLine = fnObj.startLine;
+        const fnName = fnObj.name;
+
+        // Try to find the line within the function source using the code snippet
+        if (f.codeSnippet && fnObj.source) {
+            const snippetLine = findSnippetLine(f.codeSnippet, fnObj.source, fnLine);
+            if (snippetLine) {
+                f.location = `${fnName}() line ${snippetLine}`;
+                f.lineNumber = snippetLine;
+                return f;
+            }
+        }
+
+        // Fallback — use function start line
+        f.location = `${fnName}() line ${fnLine}`;
+        f.lineNumber = fnLine;
+        return f;
+    });
+}
+
+function findSnippetLine(snippet, functionSource, functionStartLine) {
+    if (!snippet || !functionSource) return null;
+    const snippetFirstLine = snippet.trim().split("\n")[0].trim();
+    const sourceLines = functionSource.split("\n");
+
+    for (let i = 0; i < sourceLines.length; i++) {
+        if (sourceLines[i].trim().includes(snippetFirstLine.slice(0, 30))) {
+            return functionStartLine + i;
+        }
+    }
+    return null;
 }
 
 function validateDeepResponse(parsed, fnName) {
